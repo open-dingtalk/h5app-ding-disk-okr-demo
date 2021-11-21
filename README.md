@@ -1,11 +1,10 @@
-# XXXXDemo
+# 钉盘okr相关功能Demo
 
-> - 此demo主要展示XXXX相关功能，包括创建XXXX。
+> - 此demo主要展示钉盘okr场景功能，包括获取企业下的自定义空间、授权用户访问企业的自定义空间。
 > - 项目结构
-    >   - rear-end：后端模块，springboot构建，功能接口功能包括：XXXX。
->   - front-end：前端模块，react构建，场景功能包括：XXXX。
+    >   - rear-end：后端模块，springboot构建，功能接口功能包括：获取企业下的自定义空间、授权用户访问企业的自定义空间等。
+>   - front-end：前端模块，react构建，场景功能包括：数据输入、发送请求。
 >
-> （介绍demo的功能，请自行发挥）
 
 
 
@@ -33,7 +32,7 @@
 
 本demo使用接口相关权限：
 
-"A权限"、"B权限"（请填写该demo需要申请的权限）
+"钉盘访问权限"
 
 ![image-20210706172027870](https://img.alicdn.com/imgextra/i3/O1CN016WCr6428wDdBhkWi6_!!6000000007996-2-tps-1358-571.png)
 
@@ -44,7 +43,7 @@
 **下载本项目至本地**
 
 ```shell
-git clone https://github.com/open-dingtalk/h5app-XXX.git
+git clone https://github.com/open-dingtalk/h5app-ding-disk-okr-demo.git
 ```
 
 ### 获取相应参数
@@ -83,13 +82,9 @@ npm run build
 - 启动springboot
 - 移动端钉钉点击工作台，找到应用，进入应用
 
-### 页面展示
-
-（页面截图/功能效果截图）
-
 ### **参考文档**
 
-1. 获取企业内部应用access_token，文档链接：https://developers.dingtalk.com/document/app/obtain-orgapp-token?spm=ding_open_doc.document.0.0.938247e54bE13v#topic-1936350
-2. XXX
+1. 获取企业内部应用access_token，文档链接：https://developers.dingtalk.com/document/app/obtain-orgapp-token
+2. 获取企业下的自定义空间，文档链接：https://developers.dingtalk.com/document/app/obtain-user-space-under-the-enterprise
+3. 授权用户访问企业的自定义空间，文档链接：https://developers.dingtalk.com/document/app/authorize-a-user-to-access-a-custom-workspace-of-an
 
-（请完善此处的文档链接）
