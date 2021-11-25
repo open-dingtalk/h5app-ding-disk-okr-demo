@@ -1,32 +1,26 @@
 <template>
   <div id="app">
-    <div>
-      请输入登录用户的token，用于请求接口：
-      <input type="text" v-model="token">
+    <div class="header">
+      <img class="logo" :src="require('@/assets/logo.png')">
+      <b>北极星OKR模版</b>
     </div>
-    <div>
-      请输入dingCorpId：
-      <input type="text" v-model="dingCorpId">
-    </div>
-    <div>
-      请输入dingAgentId：
-      <input type="text" v-model="dingAgentId">
-    </div>
-    <div>
-      请输入dingUserId：
-      <input type="text" v-model="dingUserId">
-    </div>
-    <div>
-      <button @click="upload">上传附件</button>
-    </div>
-
-    <div>
-      <div 
-        class="file-item"
-        v-for="item in files" 
-        :key="item.url">
-        {{item.name}}
-        <button @click="preview(item)">预览附件</button>
+    <div class="container">
+      <div class="main">
+        <el-form ref="form">
+          <el-form-item label="上传附件: ">
+            <el-button type="primary" size="small" @click="upload">上传</el-button>
+          </el-form-item>
+          <el-form-item label="附件列表: ">
+            <div
+              class="file-item"
+              v-for="item in files" 
+              :key="item.url">
+              <div class="icon el-icon-notebook-2"></div>
+              <div>{{item.name}}</div>
+              <el-button class="preview-btn" type="text" @click="preview(item)">预览</el-button>
+            </div>
+          </el-form-item>
+        </el-form>
       </div>
     </div>
   </div>
@@ -37,21 +31,14 @@ import ajax from './ajax'
 export default {
   data() {
     return {
-      token: '', // nIb3oKqUMV14g/k0fP/IdblugCKoLgjj7S6Qbv9+o5/W+N/OZ7YK5PZr+0hcfOkh5YLpHKNS/TNxEGrr2ZCp+uVKWH7UUMX6AB2WNS3nxWUaGlfvFWRbO7clVfTD9/AsM8YZQpsn1DacVhd664HQokhtOA+Jz6XRP+lB1rwZEly2PSYDyEYzyVINEHMINeuK
-      dingCorpId: '', // dingfba0e203973c37fc4ac5d6980864d335
-      dingAgentId: '806630498', // 806630498 971634036
-      dingUserId: '2227162436785834', // 0943635716659752
+      dingCorpId: '',
+      dingAgentId: '',
+      dingUserId: '',
       files: []
     }
   },
   methods: {
     async upload(event) {
-      // if (!this.token) {
-      //   alert('token 必填')
-      //   return
-      // }
-      // 必须先授权钉钉 api 可用
-      await this.config()
       setTimeout(() => {
         this.uploadFile({})
       }, 30)
@@ -62,6 +49,7 @@ export default {
       const rs = await ajax.getDingSpaceId({
         dingAgentId: this.dingAgentId,
         dingCorpId: this.dingCorpId,
+        dingDomain: 'aaa'
       })
       if (rs.success) {
         return rs.data // 后端返回的 spaceId
@@ -78,6 +66,7 @@ export default {
         dingCorpId: this.dingCorpId,
         fileIds: fileIds || null,
         grantType: type, // add 或者是 download(为 download 时必须传 fileIds)
+        dingDomain: 'aaa'
       })
       // 返回是否授权成功
       return !!rs.success
@@ -108,18 +97,16 @@ export default {
             max: param.max || 1,
           },
           types: param.types || ['file', 'space'], // 若是纯图片上传暂不对接钉钉，因钉钉不支持缩略图预览
-          onSuccess: function (res) {
+          onSuccess: res => {
             // 上传成功后这里拿到文件相关 res 信息保存
             if (res && res.data && res.data.length) {
-              let list = []
               for (let item of res.data) {
-                list.push({
+                this.files.push({
                   url: item.fileId,
                   name: item.fileName,
                   size: item.fileSize,
                   fileType: item.fileType,
                 })
-                this.files = list
               }
             }
           },
@@ -158,15 +145,14 @@ export default {
     },
     // 授权钉钉 api 方法可用，最先调用
     async config() {
-      if (this.token) window.token = this.token
-      
-      const rs = await ajax.getDingInfo({
-        url: window.encodeURIComponent(location.href.split('#')[0])
+      let rs = await ajax.getDingInfo({
+        authCode: this.code,
+        url: location.href.split('#')[0]
       })
       if (rs.success) {
         let params = {
-          agentId: rs.data.agentId, // 必填，微应用ID
-          corpId: rs.data.corpId,//必填，企业ID
+          agentId: rs.data.agentId || rs.data.dingAgentId || this.dingAgentId, // 必填，微应用ID
+          corpId: rs.data.corpId || rs.data.dingCorpId || this.dingCorpId,//必填，企业ID
           timeStamp: rs.data.timeStamp, // 必填，生成签名的时间戳
           nonceStr: rs.data.nonceStr, // 必填，生成签名的随机串
           signature: rs.data.signature, // 必填，签名
@@ -179,28 +165,108 @@ export default {
           ]
         }
 
-        if (!this.dingCorpId) this.dingCorpId = params.corpId
-        if (!this.dingAgentId) this.dingAgentId = params.agentId
+        if (params.corpId) this.dingCorpId = params.corpId
+        if (params.agentId) this.dingAgentId = params.agentId
+        if (rs.data.dingUserId) this.dingUserId = rs.data.dingUserId
+        // 如果接口需要 token 我们自己开发需要准备好接口请求的 token
+        if (rs.data.token) window.token = rs.data.token
 
         dd.config(params)
-
-        dd.ready(() => {})
-
-        dd.error(err => {
-          alert(JSON.stringify(err || {msg: '未知错误'}))
-        })
       } else {
-        alert(rs.message || '获取授权信息失败')
+        alert(rs.message || 'err getDingInfo')
       }
     }
   },
-  mounted() {
-    // 
-    this.config()
+  async mounted() {
+    // 获取 corpId 和 agentId
+    let rs = await ajax.getAppConfig()
+    if (rs.success) {
+      dd.ready(() => {
+        this.dingCorpId = rs.data.dingCorpId
+        this.dingAgentId = rs.data.dingAgentId
+
+        dd.runtime.permission.requestAuthCode({
+          corpId: this.dingCorpId,
+          onSuccess: info => {
+            this.code = info.code
+            this.config()
+          },
+          onFail: err => {
+            alert(JSON.stringify(err || {msg: 'dd.runtime.permission.requestAuthCode'}))
+          }
+        })
+      })
+
+      dd.error(err => {
+        alert(JSON.stringify(err || {msg: 'dd.error'}))
+      })
+    } else {
+      alert(rs.message || 'err getAppConfig')
+    }
   }
 }
 </script>
 
 
 <style lang="scss">
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  padding: 0;
+  margin: 0;
+  height: 100vh;
+  background-color: #f3f3f3;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  justify-content: center;
+  align-items: center;
+  height: 45px;
+  background-color: #fff;
+  flex-shrink: 0;
+  .logo {
+    width: 20px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+}
+
+.container {
+  height: calc(100% - 45px);
+  overflow: auto;
+  .main {
+    width: 750px;
+    height: 100%;
+    background-color: #fff;
+    margin: 0 auto;
+    padding: 20px 30px;
+  }
+  .el-form-item {
+    display: flex;
+  }
+  .file-item {
+    display: flex;
+    align-items: center;
+    .icon {
+      margin-right: 6px;
+    }
+    .preview-btn {
+      margin-left: 10px;
+      padding: 0;
+    }
+    + .file-item {
+      margin-top: -5px;
+    }
+  }
+}
 </style>

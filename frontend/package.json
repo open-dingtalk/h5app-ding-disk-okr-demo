@@ -10,6 +10,7 @@
     "axios": "^0.24.0",
     "core-js": "^3.6.5",
     "dingtalk-jsapi": "^2.13.53",
+    "element-ui": "^2.15.6",
     "vue": "^2.6.11"
   },
   "devDependencies": {

@@ -2,25 +2,25 @@ package com.dingtalk.controller;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.alibaba.fastjson.JSONObject;
 import com.dingtalk.config.AppConfig;
-import com.dingtalk.model.CusSpaceModel;
-import com.dingtalk.model.GrantCusSpaceModel;
 import com.dingtalk.model.RpcServiceResult;
-import com.dingtalk.model.SignModel;
 import com.dingtalk.service.BizManager;
 import com.taobao.api.ApiException;
 
 /**
- * 主业务Controller，编写你的代码
+ * 钉钉-->钉盘Controller
+ * 
  */
 @RestController
 @RequestMapping("/dingding")
@@ -28,36 +28,75 @@ import com.taobao.api.ApiException;
 public class BizController {
 
     @Autowired
-    BizManager bizManager;
-
-    @RequestMapping("/hello")
-    public RpcServiceResult hello() {
-        String hello = bizManager.hello();
-        if (StringUtils.isEmpty(hello)) {
-            return RpcServiceResult.getFailureResult("-1", "fail");
-        }
-        return RpcServiceResult.getSuccessResult(hello);
+    BizManager dizManager;
+    
+    /**
+     * 获取钉钉的corpId、agentId
+     * @return
+     */
+    @RequestMapping(value = "/demo/getDingConfig", method = RequestMethod.GET)
+    public RpcServiceResult getConfig() {
+        Map<String, Object> appConfigMap = new HashMap<String, Object>();
+        appConfigMap.put("dingCorpId", AppConfig.getCorpId());
+        appConfigMap.put("dingAgentId", AppConfig.getAgentId());
+        return RpcServiceResult.getSuccessResult(appConfigMap);
     }
     
     /**
-     * 获取配置文件中的内容
+     * 获取签名信息
      * @return
+     * @throws Exception 
      */
-    @RequestMapping(value = "/getSign", method = RequestMethod.POST, produces="application/json")
-    public RpcServiceResult getSign(@RequestBody SignModel signModel) {
-    	// url可以根据实际场景使用
-    	String url = signModel.getUrl();
-    	System.out.println("getSign url: " + url);
-    	if (StringUtils.isEmpty(url)) {
-            return RpcServiceResult.getFailureResult("-1", "url is not null");
+    @RequestMapping(value = "/demo/getSign", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public RpcServiceResult getSign(@RequestBody JSONObject json) throws Exception {
+    	System.out.println("/demo/getSign json: " + json);
+    	String url = json.getString("url"); // url可以根据实际场景使用
+    	String authCode = json.getString("authCode"); // 授权码,前端获取传递到后端
+    	if (StringUtils.isEmpty(url) || StringUtils.isEmpty(authCode)) {
+            return RpcServiceResult.getFailureResult("-1", "url or authCode is not null");
         }
     	
+    	String appKey = AppConfig.getAppKey();
+    	String appSecret = AppConfig.getAppSecret();
+    	// 获取企业内部token
+    	String accessToken = dizManager.getAccessToken(appKey, appSecret);
+    	System.out.println("/demo/getSign accessToken: " + accessToken);
+    	// 用户免登陆之后, 需要动态去获取用户userid
+    	String userid = dizManager.getUserId(authCode, accessToken);
+    	System.out.println("/demo/getSign userid: " + userid);
+    	
+        // 获取签名字符串
+        String ticket = dizManager.getTicket(accessToken);
+        System.out.println("/demo/getSign ticket: " + ticket);
+        String nonceStr = UUID.randomUUID().toString().substring(0, 20);
+        long timeStamp = System.currentTimeMillis() / 1000;
+        String signature = dizManager.getMessageDigestSign(ticket, nonceStr, timeStamp, url);
+        System.out.println("/demo/getSign signature: " + signature);
+        
         Map<String, Object> appConfigMap = new HashMap<String, Object>();
-        appConfigMap.put("appKey", AppConfig.getAppKey());
-        appConfigMap.put("appSecret", AppConfig.getAppSecret());
-        appConfigMap.put("corpId", AppConfig.getCorpId());
-        appConfigMap.put("agentId", AppConfig.getAgentId());
+        appConfigMap.put("token", accessToken);
+        appConfigMap.put("dingUserId", userid);
+        appConfigMap.put("timeStamp",timeStamp);
+        appConfigMap.put("nonceStr",nonceStr);
+        appConfigMap.put("signature",signature);
         return RpcServiceResult.getSuccessResult(appConfigMap);
+    }
+    
+    /**
+     * 获取企业内部access_token
+     * @return
+     * @throws ApiException
+     */
+    @RequestMapping(value = "/demo/getAccessToken", method = RequestMethod.GET)
+    public RpcServiceResult getAccessToken() throws ApiException {
+    	// 获取token
+    	String appKey = AppConfig.getAppKey();
+    	String appSecret = AppConfig.getAppSecret();
+    	String accessToken = dizManager.getAccessToken(appKey, appSecret);
+        if (StringUtils.isEmpty(accessToken)) {
+            return RpcServiceResult.getFailureResult("-1", "fail");
+        }
+        return RpcServiceResult.getSuccessResult(accessToken);
     }
     
     /**
@@ -69,13 +108,17 @@ public class BizController {
      * @return
      * @throws ApiException
      */
-    @RequestMapping("/getCorpToken")
+    @RequestMapping(value = "/demo/getCorpToken", method = RequestMethod.GET)
     public RpcServiceResult getCorpToken() throws ApiException {
-        String getCorpToken = bizManager.getCorpToken();
-        if (StringUtils.isEmpty(getCorpToken)) {
+    	// 获取token
+    	String appKey = AppConfig.getAppKey();
+    	String appSecret = AppConfig.getAppSecret();
+    	String corpId = AppConfig.getCorpId();
+    	String corpToken = dizManager.getCorpToken(appKey, appSecret, corpId, "suiteTicket");
+        if (StringUtils.isEmpty(corpToken)) {
             return RpcServiceResult.getFailureResult("-1", "fail");
         }
-        return RpcServiceResult.getSuccessResult(getCorpToken);
+        return RpcServiceResult.getSuccessResult(corpToken);
     }
     
     /**
@@ -83,17 +126,19 @@ public class BizController {
      * @return
      * @throws ApiException
      */
-    @RequestMapping(value = "/cusSpace/getCusSpace", method = RequestMethod.POST, produces="application/json")
-    public RpcServiceResult getCusSpace(@RequestBody CusSpaceModel cusSpaceModel) throws ApiException {
-//    	String dingDomain = cusSpaceModel.getDingDomain();
-    	String dingDomain = "sdljfij";
-    	String dingAgentId = cusSpaceModel.getDingAgentId();
-    	System.out.println("getCusSpace dingDomain: " + dingDomain + ", dingAgentId: " + dingAgentId);
+    @RequestMapping(value = "/demo/cusSpace/getCusSpace", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public RpcServiceResult getCusSpace(@RequestBody JSONObject json) throws ApiException {
+    	System.out.println("/demo/cusSpace/getCusSpace json: " + json);
+    	String token = json.getString("token");
+    	String dingAgentId = json.getString("dingAgentId");
+    	String dingDomain = json.getString("dingDomain");
+    	if (StringUtils.isEmpty(token)) {
+            return RpcServiceResult.getFailureResult("-1", "token is not null");
+        }
     	if (StringUtils.isEmpty(dingAgentId)) {
             return RpcServiceResult.getFailureResult("-1", "dingAgentId is not null");
         }
-    	
-    	String customSpace = bizManager.getCusSpace(dingDomain, dingAgentId);
+    	String customSpace = dizManager.getCusSpace(token, dingAgentId, dingDomain);
         if (StringUtils.isEmpty(customSpace)) {
             return RpcServiceResult.getFailureResult("-1", "fail");
         }
@@ -105,23 +150,29 @@ public class BizController {
      * @return
      * @throws ApiException
      */
-    @RequestMapping(value = "/cusSpace/getGrantCusSpace", method = RequestMethod.POST, produces="application/json")
-    public RpcServiceResult getGrantCusSpace(@RequestBody GrantCusSpaceModel grantCusSpaceModel) throws ApiException {
-    	String dingUserId = grantCusSpaceModel.getDingUserId();
-    	String dingAgentId = grantCusSpaceModel.getDingAgentId();
-    	String fileIds = grantCusSpaceModel.getFileIds();
-    	String grantType = grantCusSpaceModel.getGrantType();
-    	
-    	System.out.println("getGrantCusSpace dingUserId: " + dingUserId + ", dingAgentId: " + dingAgentId
-    			+ ", fileIds: " + fileIds + ", grantType: " + grantType);
+    @RequestMapping(value = "/demo/cusSpace/getGrantCusSpace", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public RpcServiceResult getGrantCusSpace(@RequestBody JSONObject json) throws ApiException {
+    	System.out.println("/demo/cusSpace/getGrantCusSpace json: " + json);
+    	String token = json.getString("token");
+    	String dingUserId = json.getString("dingUserId");
+    	String dingAgentId = json.getString("dingAgentId");
+    	String fileIds = json.getString("fileIds");
+    	String grantType = json.getString("grantType");
+    	String dingDomain = json.getString("dingDomain");
+    	if (StringUtils.isEmpty(token)) {
+            return RpcServiceResult.getFailureResult("-1", "token is not null");
+        }
     	if (StringUtils.isEmpty(dingAgentId)) {
             return RpcServiceResult.getFailureResult("-1", "dingAgentId is not null");
         }
     	if (StringUtils.isEmpty(dingUserId)) {
             return RpcServiceResult.getFailureResult("-1", "dingUserId is not null");
         }
+    	if (StringUtils.isEmpty(dingDomain)) {
+            return RpcServiceResult.getFailureResult("-1", "dingDomain is not null");
+        }
     	
-    	String grantCusSpace = bizManager.getGrantCusSpace(dingAgentId, grantType, dingUserId, fileIds);
+    	String grantCusSpace = dizManager.getGrantCusSpace(token, dingAgentId, grantType, dingUserId, fileIds, dingDomain);
         if (StringUtils.isEmpty(grantCusSpace)) {
             return RpcServiceResult.getFailureResult("-1", "fail");
         }

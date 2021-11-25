@@ -28,7 +28,6 @@ public class UserManager {
 
     /**
      * 根据免登授权码获取用户id
-     *
      * @param authCode 免登授权码
      * @return
      */
