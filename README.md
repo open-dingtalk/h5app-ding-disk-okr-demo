@@ -3,7 +3,7 @@
 > - 此demo主要展示钉盘okr场景功能，包括获取企业下的自定义空间、授权用户访问企业的自定义空间。
 > - 项目结构
     >   - rear-end：后端模块，springboot构建，功能接口功能包括：获取企业下的自定义空间、授权用户访问企业的自定义空间等。
->   - front-end：前端模块，react构建，场景功能包括：数据输入、发送请求。
+>   - front-end：前端模块，react构建，场景功能包括：计算签名、钉钉免登、保存文件到钉盘、选取钉盘目录、预览钉盘文件等。
 >
 
 
@@ -82,9 +82,22 @@ npm run build
 - 启动springboot
 - 移动端钉钉点击工作台，找到应用，进入应用
 
+### 效果展示
+
+- 页面
+
+![](https://img.alicdn.com/imgextra/i2/O1CN01ceYzja1mjvUH52dCe_!!6000000004991-2-tps-300-131.png)
+
+- 上传文件到钉盘并预览
+
+![](https://img.alicdn.com/imgextra/i2/O1CN01dE0RN71ejuXzZt5HK_!!6000000003908-2-tps-300-145.png)
+
 ### **参考文档**
 
 1. 获取企业内部应用access_token，文档链接：https://developers.dingtalk.com/document/app/obtain-orgapp-token
 2. 获取企业下的自定义空间，文档链接：https://developers.dingtalk.com/document/app/obtain-user-space-under-the-enterprise
 3. 授权用户访问企业的自定义空间，文档链接：https://developers.dingtalk.com/document/app/authorize-a-user-to-access-a-custom-workspace-of-an
+4. JSAPI鉴权，文档链接：https://developers.dingtalk.com/document/app/jsapi-authentication
+5. JSAPI-上传附件到钉盘/从钉盘选择文件，文档链接：https://developers.dingtalk.com/document/app/upload-attachment-to-nail-plate-select-file-from-nail-plate-h5
+6. JSAPI-预览钉盘文件，文档链接：https://developers.dingtalk.com/document/app/preview-nail-plate-file
 
