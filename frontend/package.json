@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build"
+    "build": "vue-cli-service build",
+    "build-windows": "vue-cli-service build && xcopy dist\\* ..\\backend\\src\\main\\resources\\static\\ /E /Y",
+    "build-mac": "vue-cli-service build && cp -R ./dist/* ../backend/src/main/resources/static"
   },
   "dependencies": {
     "axios": "^0.24.0",
